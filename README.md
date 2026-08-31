@@ -16,12 +16,16 @@ loaded, and IPC methods for Hyprland keybinds.
   - middle click — next track
   - right click — open / close the panel
   - scroll — volume ±1 dB
-- **Panel** — 84px cover art, seekable progress bar (or "En vivo" for streams),
-  prev / play-pause / next / stop, shuffle and repeat, a volume slider, and the
-  yt-radio toggle.
+- **Panel** — 84px cover art, a full-width audio spectrum, seekable progress bar
+  (or "En vivo" for streams), prev / play-pause / next / stop, shuffle and repeat,
+  a volume slider, and the yt-radio toggle.
 - **Cover art** — for YouTube / YouTube Music tracks the video id in `track.path`
   becomes an `i.ytimg.com` thumbnail; local files use cliamp's embedded
   `album_art_url`; radio streams fall back to a glyph.
+- **Audio spectrum** — bars from `cliamp visstream`, drawn *behind* the bar's
+  now-playing text at a tunable opacity, and full-size with peak caps in the panel.
+  A single `visstream` process is shared by every monitor and only runs while
+  something is on screen and audio is playing.
 - **yt-radio** — a switch bound to `cliamp plugins call yt-radio status|toggle`.
   Disabled while cliamp is not running, because cliamp only loads Lua plugins in
   the TUI (not in `cliamp --daemon`).
@@ -57,6 +61,9 @@ Set from the Omarchy menu → Setup → Bar, or in `~/.config/omarchy/shell.json
 | `hideWhenStopped` | boolean | `false` | Remove the widget from the bar while cliamp is not running. |
 | `showYtRadioDot` | boolean | `true` | Accent dot next to the icon while yt-radio is active. |
 | `showBarThumbnail` | boolean | `true` | Show the cover thumbnail in the bar instead of the glyph (falls back to the glyph when there's no art). |
+| `showBarSpectrum` | boolean | `true` | Draw the audio spectrum behind the now-playing text while music plays. |
+| `barSpectrumOpacity` | integer | `35` | How visible the bar spectrum is (10–80 %). Lower = more readable text. |
+| `showPanelSpectrum` | boolean | `true` | Show the large spectrum strip in the panel (only while the panel is open). |
 
 Two extra keys are read from `shell.json` but not shown in the settings form
 (rarely needed): `cliampPath` (default `cliamp`) and `ytRadioPlugin` (default
@@ -110,6 +117,9 @@ Saving a file under `~/.config/omarchy/plugins/` hot-reloads it; changes to
 - `cliamp seek <seconds>` is treated as an absolute position (per its `--help`).
 - cliamp allows only one instance per user; the TUI and `--daemon` share the
   same socket at `~/.config/cliamp/cliamp.sock`.
+- The spectrum needs a spectrum-type visualizer active in cliamp. `cliamp --daemon`
+  already reports `bands`; in the TUI, if the bars stay flat, pick one with
+  `cliamp vis Bars` (or Columns, ClassicLED, …).
 
 ## License
 

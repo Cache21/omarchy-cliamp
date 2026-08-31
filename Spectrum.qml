@@ -81,13 +81,14 @@ Item {
         }
 
         Rectangle {
-          visible: root.peaks
+          readonly property real level: root.peakLevels[col.index] || 0
+          visible: root.peaks && level > 0.03
           width: parent.width
           height: Math.max(1, root.minBar)
           radius: height / 2
           color: root.barColor
           opacity: 0.9
-          y: parent.height - Math.max(height, (root.peakLevels[col.index] || 0) * root.height)
+          y: parent.height - Math.max(height, level * root.height)
 
           Behavior on y {
             NumberAnimation { duration: 90; easing.type: Easing.OutQuad }

@@ -177,7 +177,7 @@ BarWidget {
         bands: root.svc ? root.svc.visBands : []
         barColor: root.bar ? root.bar.barForeground : Color.foreground
         gap: Math.max(1, Style.space(2))
-        minBar: 1
+        minBar: 0
       }
 
       Text {
