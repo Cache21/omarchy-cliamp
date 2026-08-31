@@ -15,7 +15,8 @@ Panel {
   readonly property var svc: bar && bar.shell ? bar.shell.serviceFor("io.github.cache21.cliamp") : null
   readonly property bool active: !!svc && svc.running
   readonly property bool hasDuration: !!svc && svc.durationSec > 0
-  readonly property string panelArtUrl: (svc && svc.running) ? Model.artUrl(svc.snapshot, "panel") : ""
+  readonly property string panelArtUrl: (svc && svc.running) ? Model.artUrl(svc.snapshot) : ""
+  readonly property string panelArtFallback: (svc && svc.running) ? Model.artUrlFallback(svc.snapshot) : ""
   readonly property bool showPanelSpectrum: setting("showPanelSpectrum", true) === true
 
   // Hold the shared visstream on the service only while the popup is open.
@@ -74,7 +75,13 @@ Panel {
               id: artImage
               anchors.fill: parent
               anchors.margins: Style.space(2)
-              source: root.panelArtUrl
+              readonly property string primary: root.panelArtUrl
+              source: primary
+              onPrimaryChanged: source = primary
+              onStatusChanged: {
+                if (status === Image.Error && source === primary && root.panelArtFallback)
+                  source = root.panelArtFallback
+              }
               sourceSize.width: 240
               sourceSize.height: 240
               fillMode: Image.PreserveAspectCrop

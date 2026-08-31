@@ -85,14 +85,16 @@ eq(M.youtubeIdFromPath("https://music.youtube.com/watch?v=abc123_-XY&list=RDwhat
 eq(M.youtubeIdFromPath("https://youtu.be/dQw4w9WgXcQ"), "dQw4w9WgXcQ", "youtu.be short link")
 eq(M.youtubeIdFromPath("http://radio.cliamp.stream/lofi/stream"), "", "radio stream -> no id")
 eq(M.youtubeIdFromPath(""), "", "empty -> no id")
-eq(M.artUrl(null, "bar"), "", "null -> no art")
-eq(M.artUrl({ running: true, path: "https://www.youtube.com/watch?v=dQw4w9WgXcQ" }, "bar"),
-  "https://i.ytimg.com/vi/dQw4w9WgXcQ/mqdefault.jpg", "bar size -> mqdefault")
-eq(M.artUrl({ running: true, path: "https://www.youtube.com/watch?v=dQw4w9WgXcQ" }, "panel"),
-  "https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg", "panel size -> hqdefault")
-eq(M.artUrl({ running: true, albumArtUrl: "file:///home/x/cover.jpg", path: "/home/x/song.flac" }, "panel"),
+eq(M.artUrl(null), "", "null -> no art")
+eq(M.artUrl({ running: true, path: "https://www.youtube.com/watch?v=dQw4w9WgXcQ" }),
+  "https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg", "youtube -> hqdefault")
+eq(M.artUrlFallback({ running: true, path: "https://www.youtube.com/watch?v=dQw4w9WgXcQ" }),
+  "https://i.ytimg.com/vi/dQw4w9WgXcQ/default.jpg", "fallback -> default.jpg")
+eq(M.artUrl({ running: true, albumArtUrl: "file:///home/x/cover.jpg", path: "/home/x/song.flac" }),
   "file:///home/x/cover.jpg", "local file -> cliamp's album_art_url wins")
-eq(M.artUrl({ running: true, path: "http://radio.cliamp.stream/lofi/stream" }, "bar"),
+eq(M.artUrlFallback({ running: true, albumArtUrl: "file:///home/x/cover.jpg", path: "/home/x/song.flac" }),
+  "", "no ytimg fallback when a local album_art_url is used")
+eq(M.artUrl({ running: true, path: "http://radio.cliamp.stream/lofi/stream" }),
   "", "radio -> no art")
 
 // ---- sampleBands ----

@@ -37,7 +37,8 @@ BarWidget {
     else if (!visWant && visHeld) { svc.releaseVis(); visHeld = false }
   }
 
-  readonly property string barArtUrl: (svc && svc.running && showBarThumbnail) ? Model.artUrl(svc.snapshot, "bar") : ""
+  readonly property string barArtUrl: (svc && svc.running && showBarThumbnail) ? Model.artUrl(svc.snapshot) : ""
+  readonly property string barArtFallback: (svc && svc.running && showBarThumbnail) ? Model.artUrlFallback(svc.snapshot) : ""
   readonly property string displayText: {
     if (!svc || !svc.running) return "cliamp"
     return Model.nowPlayingLabel(svc.snapshot, root.showArtist) || "cliamp"
@@ -117,7 +118,15 @@ BarWidget {
             id: thumb
             anchors.fill: parent
             anchors.margins: 1
-            source: root.barArtUrl
+            readonly property string primary: root.barArtUrl
+            source: primary
+            // On a track change, re-arm to the primary URL (the imperative
+            // assignment in onStatusChanged otherwise sticks on the old value).
+            onPrimaryChanged: source = primary
+            onStatusChanged: {
+              if (status === Image.Error && source === primary && root.barArtFallback)
+                source = root.barArtFallback
+            }
             sourceSize.width: 96
             sourceSize.height: 96
             fillMode: Image.PreserveAspectCrop

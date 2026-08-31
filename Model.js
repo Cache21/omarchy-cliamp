@@ -137,16 +137,23 @@ function youtubeIdFromPath(path) {
 }
 
 // Best-effort cover art URL for the current track:
-//   - local files       -> cliamp's own album_art_url (file:// or data:)
-//   - YouTube (Music)    -> the video thumbnail from i.ytimg.com
-//   - radio / other      -> "" (caller falls back to a glyph)
-// size: "panel" (hqdefault 480x360) or "bar" (mqdefault 320x180).
-function artUrl(st, size) {
+//   - local files    -> cliamp's own album_art_url (file:// or data:)
+//   - YouTube (Music) -> the `hqdefault` video thumbnail from i.ytimg.com
+//   - radio / other   -> "" (caller falls back to a glyph)
+// `hqdefault` for both bar and panel: it's present on effectively every video,
+// whereas `mqdefault`/`sddefault` 404 for some auto-generated "art tracks".
+function artUrl(st) {
   if (!st || !st.running) return ""
   if (st.albumArtUrl) return st.albumArtUrl
   var id = youtubeIdFromPath(st.path)
-  if (!id) return ""
-  return "https://i.ytimg.com/vi/" + id + "/" + (size === "panel" ? "hqdefault" : "mqdefault") + ".jpg"
+  return id ? "https://i.ytimg.com/vi/" + id + "/hqdefault.jpg" : ""
+}
+
+// 120x90, present even when hqdefault isn't — used as the error fallback.
+function artUrlFallback(st) {
+  if (!st || !st.running || st.albumArtUrl) return ""
+  var id = youtubeIdFromPath(st.path)
+  return id ? "https://i.ytimg.com/vi/" + id + "/default.jpg" : ""
 }
 
 // ---- spectrum -------------------------------------------------------
@@ -200,6 +207,7 @@ if (typeof module !== "undefined" && module.exports) {
     normalizeRepeat: normalizeRepeat,
     youtubeIdFromPath: youtubeIdFromPath,
     artUrl: artUrl,
+    artUrlFallback: artUrlFallback,
     nowPlayingLabel: nowPlayingLabel,
     tooltipText: tooltipText,
     stateLabel: stateLabel,
