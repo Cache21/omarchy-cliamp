@@ -15,7 +15,7 @@ loaded, and IPC methods for Hyprland keybinds.
   - left click — play / pause (`cliamp toggle`)
   - middle click — next track
   - right click — open / close the panel
-  - scroll — volume ±1 dB
+  - scroll — volume ±1 dB per notch, with a slider OSD (mark at +0 dB) below the widget
 - **Panel** — 84px cover art, a full-width audio spectrum, seekable progress bar
   (or "En vivo" for streams), prev / play-pause / next / stop, shuffle and repeat,
   a volume slider, the yt-radio toggle, and a **YouTube search**.
@@ -73,6 +73,7 @@ Set from the Omarchy menu → Setup → Bar, or in `~/.config/omarchy/shell.json
 | `showPanelSpectrum` | boolean | `true` | Show the large spectrum strip in the panel (only while the panel is open). |
 | `showPanelSearch` | boolean | `true` | Show the "Buscar en YouTube" button in the panel (`/` also opens search). |
 | `searchResultCount` | integer | `12` | Results per YouTube search (`ytsearchN`), 5–25. |
+| `showVolumeOsd` | boolean | `true` | Show a transient volume slider (with a +0 dB mark) below the widget while scrolling. |
 
 Two extra keys are read from `shell.json` but not shown in the settings form
 (rarely needed): `cliampPath` (default `cliamp`) and `ytRadioPlugin` (default
