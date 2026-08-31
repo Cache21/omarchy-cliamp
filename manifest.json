@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "io.github.cache21.cliamp",
   "name": "cliamp",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "author": "Manuel Artia",
   "license": "MIT",
   "description": "Now-playing y controles de cliamp en la barra de Omarchy, con panel de transporte, toggle de la radio infinita (yt-radio) y keybinds por IPC.",
@@ -27,7 +27,9 @@
       "showBarThumbnail": true,
       "showBarSpectrum": true,
       "barSpectrumOpacity": 25,
-      "showPanelSpectrum": true
+      "showPanelSpectrum": true,
+      "showPanelSearch": true,
+      "searchResultCount": 12
     },
     "schema": [
       {
@@ -101,6 +103,23 @@
         "label": "Espectro en el panel",
         "description": "Muestra una tira de espectro grande en el panel desplegable (solo mientras el panel está abierto).",
         "defaultValue": true
+      },
+      {
+        "key": "showPanelSearch",
+        "type": "boolean",
+        "label": "Buscador de YouTube en el panel",
+        "description": "Agrega un botón 'Buscar en YouTube' (o la tecla /) al panel para buscar y encolar/reproducir canciones con yt-dlp.",
+        "defaultValue": true
+      },
+      {
+        "key": "searchResultCount",
+        "type": "integer",
+        "label": "Resultados de búsqueda",
+        "description": "Cuántos resultados pedir a yt-dlp por búsqueda (ytsearchN).",
+        "min": 5,
+        "max": 25,
+        "step": 1,
+        "defaultValue": 12
       }
     ]
   }

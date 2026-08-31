@@ -38,6 +38,7 @@ function parseStatus(jsonText) {
     shuffle: !!obj.shuffle,
     repeat: normalizeRepeat(obj.repeat),
     themeName: obj.theme && obj.theme.name ? String(obj.theme.name) : "",
+    index: Math.round(num(obj.index)),
     total: Math.round(num(obj.total))
   }
 }
@@ -123,6 +124,59 @@ function repeatLabel(mode) {
   if (mode === "all") return "Todo"
   if (mode === "one") return "Una"
   return "Off"
+}
+
+// Compact view-count, truncated like YouTube: 1250000 -> "1.2M",
+// 288389622 -> "288M", 830219 -> "830K", 420 -> "420".
+function fmtViews(n) {
+  n = Number(n) || 0
+  function scaled(x) { return x >= 10 ? String(Math.floor(x)) : String(Math.floor(x * 10) / 10) }
+  if (n >= 1e9) return scaled(n / 1e9) + "B"
+  if (n >= 1e6) return scaled(n / 1e6) + "M"
+  if (n >= 1e3) return scaled(n / 1e3) + "K"
+  return String(Math.round(n))
+}
+
+// ---- youtube search ------------------------------------------------
+
+// Parse `yt-dlp "ytsearchN:..." --flat-playlist -J` output (a playlist object
+// with `entries[]`). Returns [{ id, title, channel, durationSec, views, url }]
+// with null-guards; [] on invalid JSON / no entries.
+function parseYtdlpResults(jsonText) {
+  var out = []
+  var obj
+  try {
+    obj = JSON.parse(jsonText)
+  } catch (e) {
+    return out
+  }
+  var entries = obj && Array.isArray(obj.entries) ? obj.entries
+    : (Array.isArray(obj) ? obj : [])
+  for (var i = 0; i < entries.length; i++) {
+    var e = entries[i] || {}
+    var id = String(e.id || "")
+    if (!id) continue
+    var dur = Number(e.duration)
+    out.push({
+      id: id,
+      title: String(e.title || id),
+      channel: String(e.channel || e.uploader || ""),
+      durationSec: isFinite(dur) && dur > 0 ? dur : 0,
+      views: Number(e.view_count) || 0,
+      url: String(e.url || ("https://www.youtube.com/watch?v=" + id))
+    })
+  }
+  return out
+}
+
+// "canal · 3:38 · 288M" (skips the empty parts).
+function resultCaption(r) {
+  if (!r) return ""
+  var parts = []
+  if (r.channel) parts.push(r.channel)
+  if (r.durationSec) parts.push(fmtTime(r.durationSec))
+  if (r.views) parts.push(fmtViews(r.views))
+  return parts.join(" · ")
 }
 
 // ---- cover art -------------------------------------------------------
@@ -216,6 +270,9 @@ if (typeof module !== "undefined" && module.exports) {
     fmtVolume: fmtVolume,
     repeatLabel: repeatLabel,
     sampleBands: sampleBands,
+    fmtViews: fmtViews,
+    parseYtdlpResults: parseYtdlpResults,
+    resultCaption: resultCaption,
     parseYtRadioStatus: parseYtRadioStatus
   }
 }

@@ -39,7 +39,11 @@ Item {
   property bool shuffle: false
   property string repeat: "off"           // off | all | one
   property string themeName: ""
+  property int index: 0
   property int total: 0
+  // Bumped on every completed status read — lets the "play now" jump loop
+  // wait for a fresh snapshot before deciding its next `next`.
+  property int _statusSeq: 0
 
   property bool ytRadioKnown: false
   property bool ytRadioEnabled: false
@@ -65,7 +69,8 @@ Item {
     album: root.album, station: root.station, path: root.path, albumArtUrl: root.albumArtUrl,
     isStream: root.isStream,
     positionSec: root.positionSec, durationSec: root.durationSec, volumeDb: root.volumeDb,
-    shuffle: root.shuffle, repeat: root.repeat, themeName: root.themeName, total: root.total
+    shuffle: root.shuffle, repeat: root.repeat, themeName: root.themeName,
+    index: root.index, total: root.total
   })
 
   // ---- polling --------------------------------------------------------
@@ -82,7 +87,10 @@ Item {
     stdout: StdioCollector {
       id: statusOut
       waitForEnd: true
-      onStreamFinished: root._applyStatus(Model.parseStatus(text))
+      onStreamFinished: {
+        root._applyStatus(Model.parseStatus(text))
+        root._statusSeq++
+      }
     }
     onExited: function (exitCode) {
       // exitCode 1 with empty stdout == "cliamp is not running". The
@@ -101,7 +109,7 @@ Item {
       root.isStream = false
       root.positionSec = 0; root.durationSec = 0
       root.volumeDb = 0; root.shuffle = false; root.repeat = "off"
-      root.themeName = ""; root.total = 0
+      root.themeName = ""; root.index = 0; root.total = 0
       root.ytRadioKnown = false; root.ytRadioEnabled = false
       root.visBands = []
       return
@@ -121,6 +129,7 @@ Item {
     root.shuffle = s.shuffle
     root.repeat = s.repeat
     root.themeName = s.themeName
+    root.index = s.index
     root.total = s.total
   }
 
@@ -216,6 +225,60 @@ Item {
     interval: 400
     repeat: false
     onTriggered: if (root.running && !ytRadioProc.running) ytRadioProc.running = true
+  }
+
+  // ---- youtube search: enqueue / play now -------------------------
+  // `cliamp queue <url>` appends one entry (no expand, no autoplay), applied to
+  // the live TUI/daemon over the socket.
+
+  function queueUrl(url) {
+    if (!url) return
+    Quickshell.execDetached([root.cliampBin, "queue", String(url)])
+    root._bump()
+  }
+
+  property string _jumpTarget: ""   // video id we're trying to reach
+  property int _jumpBaseTotal: 0
+  property int _jumpTries: 0
+  property int _jumpSeenSeq: 0
+
+  // Best-effort "play this now": queue the url, then step `next` through the
+  // (yt-radio-filled) queue until the current track's video id matches. Each
+  // step waits for a fresh status read (_statusSeq) so we don't overshoot.
+  // Gives up after ~40 tries — the track stays queued either way.
+  function playUrl(url) {
+    if (!url) return
+    root._jumpTarget = Model.youtubeIdFromPath(url)
+    root._jumpBaseTotal = root.total
+    root._jumpTries = 0
+    root._jumpSeenSeq = root._statusSeq
+    Quickshell.execDetached([root.cliampBin, "queue", String(url)])
+    if (root._jumpTarget !== "") jumpTimer.start()
+    else root._bump()   // not a youtube url we can match — just queued
+  }
+
+  function _stopJump() { jumpTimer.stop(); root._jumpTarget = "" }
+
+  Timer {
+    id: jumpTimer
+    interval: 350
+    repeat: true
+    onTriggered: {
+      if (root._jumpTarget === "" || root._jumpTries > 40) { root._stopJump(); return }
+      root._jumpTries++
+      root.refresh()
+      if (root._statusSeq === root._jumpSeenSeq) return   // no fresh status yet
+      root._jumpSeenSeq = root._statusSeq
+      if (!root.running) { if (root._jumpTries > 8) root._stopJump(); return }
+      if (Model.youtubeIdFromPath(root.path) === root._jumpTarget) {
+        if (root.state !== "playing") root.play()
+        root._stopJump()
+        return
+      }
+      // Only start stepping once the queued item has actually landed.
+      if (root.total > root._jumpBaseTotal)
+        Quickshell.execDetached([root.cliampBin, "next"])
+    }
   }
 
   // ---- spectrum stream ---------------------------------------------

@@ -18,11 +18,15 @@ Panel {
   readonly property string panelArtUrl: (svc && svc.running) ? Model.artUrl(svc.snapshot) : ""
   readonly property string panelArtFallback: (svc && svc.running) ? Model.artUrlFallback(svc.snapshot) : ""
   readonly property bool showPanelSpectrum: setting("showPanelSpectrum", true) === true
+  readonly property bool showPanelSearch: setting("showPanelSearch", true) === true
+  readonly property int searchResultCount: Math.max(5, Math.min(25, Number(setting("searchResultCount", 12))))
+  property bool searchMode: false
 
   // Hold the shared visstream on the service only while the popup is open.
   property bool visHeld: false
   onOpenedChanged: {
     if (!svc) return
+    if (!opened) root.searchMode = false
     if (opened && !visHeld) { svc.acquireVis(); visHeld = true }
     else if (!opened && visHeld) { svc.releaseVis(); visHeld = false }
   }
@@ -36,13 +40,15 @@ Panel {
     open: root.opened
     focusTarget: keyCatcher
     contentWidth: panel.fittedContentWidth(Style.space(340))
-    contentHeight: panel.fittedContentHeight(column.implicitHeight, Style.space(460))
+    contentHeight: panel.fittedContentHeight(column.implicitHeight, Style.space(560))
 
     PanelKeyCatcher {
       id: keyCatcher
       anchors.fill: parent
+      blocked: root.searchMode
       onCloseRequested: root.close()
       onTextKey: function (t) {
+        if (t === "/") { root.searchMode = true; return }
         if (!root.svc) return
         if (t === " ") root.svc.playPause()
         else if (t === "n") root.svc.next()
@@ -134,6 +140,39 @@ Panel {
             }
           }
         }
+
+        // ---- youtube search ----
+        Button {
+          visible: root.showPanelSearch && root.active && !root.searchMode
+          iconText: "󰍉" // nf-md-magnify
+          text: "Buscar en YouTube"
+          leftAlign: true
+          bordered: true
+          foreground: root.bar.foreground
+          fontFamily: root.bar.fontFamily
+          onClicked: root.searchMode = true
+        }
+
+        Search {
+          id: search
+          width: parent.width
+          visible: root.searchMode
+          active: root.searchMode
+          bar: root.bar
+          svc: root.svc
+          resultCount: root.searchResultCount
+          onExitRequested: {
+            root.searchMode = false
+            Qt.callLater(keyCatcher.forceActiveFocus)
+          }
+        }
+
+        // ---- player controls (hidden while searching) ----
+        Column {
+          id: controls
+          width: parent.width
+          spacing: Style.space(12)
+          visible: !root.searchMode
 
         // ---- spectrum ----
         Spectrum {
@@ -339,6 +378,7 @@ Panel {
             wrapMode: Text.WordWrap
           }
         }
+        } // controls
       }
     }
   }

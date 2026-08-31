@@ -109,6 +109,40 @@ eq(M.sampleBands([2, -1, 0.5], 3), [1, 0, 0.5], "clamps out-of-range values to [
 eq(M.sampleBands([0.6, 0.47, 0.34, 0.43, 0.36, 0.17, 0.12, 0.06, 0, 0], 5).length, 5,
   "10 real bands -> exactly 5 buckets")
 
+// ---- fmtViews ----
+console.log("fmtViews")
+eq(M.fmtViews(420), "420", "hundreds -> plain")
+eq(M.fmtViews(830219), "830K", "830K")
+eq(M.fmtViews(1250000), "1.2M", "1.2M")
+eq(M.fmtViews(288389622), "288M", "288M (no decimal >= 10M)")
+eq(M.fmtViews(0), "0", "0")
+eq(M.fmtViews(null), "0", "null -> 0")
+
+// ---- parseYtdlpResults / resultCaption ----
+console.log("parseYtdlpResults / resultCaption")
+const ytdlpJson = JSON.stringify({
+  _type: "playlist", id: "ytsearch3", title: "x",
+  entries: [
+    { id: "2SUwOgmvzK4", title: "Tame Impala - The Less I Know The Better (Audio)",
+      channel: "Tame Impala", uploader: "Tame Impala", duration: 218, view_count: 288389622,
+      url: "https://www.youtube.com/watch?v=2SUwOgmvzK4" },
+    { id: "noDur", title: "no duration", uploader: "Someone", duration: null },
+    { title: "no id, skipped", id: "" }
+  ]
+})
+const rs = M.parseYtdlpResults(ytdlpJson)
+eq(rs.length, 2, "skips entries without id")
+eq(rs[0], { id: "2SUwOgmvzK4", title: "Tame Impala - The Less I Know The Better (Audio)",
+  channel: "Tame Impala", durationSec: 218, views: 288389622,
+  url: "https://www.youtube.com/watch?v=2SUwOgmvzK4" }, "full entry mapped")
+eq(rs[1].channel, "Someone", "channel falls back to uploader")
+eq(rs[1].durationSec, 0, "null duration -> 0")
+eq(rs[1].url, "https://www.youtube.com/watch?v=noDur", "url derived from id when missing")
+eq(M.parseYtdlpResults("not json"), [], "invalid json -> []")
+eq(M.parseYtdlpResults('{"entries":[]}'), [], "no entries -> []")
+eq(M.resultCaption(rs[0]), "Tame Impala · 3:38 · 288M", "caption joins channel/duration/views")
+eq(M.resultCaption(rs[1]), "Someone", "caption skips empty duration/views")
+
 // ---- parseYtRadioStatus ----
 console.log("parseYtRadioStatus")
 eq(M.parseYtRadioStatus(""), { known: false, enabled: false }, "empty -> unknown")
