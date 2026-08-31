@@ -22,10 +22,10 @@ loaded, and IPC methods for Hyprland keybinds.
 - **Cover art** — for YouTube / YouTube Music tracks the video id in `track.path`
   becomes an `i.ytimg.com` thumbnail; local files use cliamp's embedded
   `album_art_url`; radio streams fall back to a glyph.
-- **Audio spectrum** — bars from `cliamp visstream`, drawn *behind* the bar's
-  now-playing text at a tunable opacity, and full-size with peak caps in the panel.
-  A single `visstream` process is shared by every monitor and only runs while
-  something is on screen and audio is playing.
+- **Audio spectrum** — bars from `cliamp visstream` in the theme accent colour,
+  drawn *behind* the bar's now-playing text at a tunable opacity, and full-size
+  with peak caps in the panel. A single `visstream` process is shared by every
+  monitor and only runs while something is on screen and audio is playing.
 - **yt-radio** — a switch bound to `cliamp plugins call yt-radio status|toggle`.
   Disabled while cliamp is not running, because cliamp only loads Lua plugins in
   the TUI (not in `cliamp --daemon`).
@@ -62,7 +62,7 @@ Set from the Omarchy menu → Setup → Bar, or in `~/.config/omarchy/shell.json
 | `showYtRadioDot` | boolean | `true` | Accent dot next to the icon while yt-radio is active. |
 | `showBarThumbnail` | boolean | `true` | Show the cover thumbnail in the bar instead of the glyph (falls back to the glyph when there's no art). |
 | `showBarSpectrum` | boolean | `true` | Draw the audio spectrum behind the now-playing text while music plays. |
-| `barSpectrumOpacity` | integer | `35` | How visible the bar spectrum is (10–80 %). Lower = more readable text. |
+| `barSpectrumOpacity` | integer | `25` | How visible the bar spectrum is (10–80 %). Lower = more readable text. |
 | `showPanelSpectrum` | boolean | `true` | Show the large spectrum strip in the panel (only while the panel is open). |
 
 Two extra keys are read from `shell.json` but not shown in the settings form

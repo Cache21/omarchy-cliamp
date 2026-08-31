@@ -20,7 +20,7 @@ BarWidget {
   readonly property bool hideWhenStopped: setting("hideWhenStopped", false) === true
   readonly property bool showBarThumbnail: setting("showBarThumbnail", true) === true
   readonly property bool showBarSpectrum: setting("showBarSpectrum", true) === true
-  readonly property real barSpectrumOpacity: Math.max(0.05, Math.min(0.9, Number(setting("barSpectrumOpacity", 35)) / 100))
+  readonly property real barSpectrumOpacity: Math.max(0.05, Math.min(0.9, Number(setting("barSpectrumOpacity", 25)) / 100))
 
   readonly property bool active: !!svc && svc.running
   readonly property bool barSpectrumOn: showBarSpectrum && !!svc && svc.playing && svc.visBands.length > 0
@@ -187,7 +187,7 @@ BarWidget {
         visible: root.barSpectrumOn
         opacity: root.barSpectrumOpacity
         bands: root.svc ? root.svc.visBands : []
-        barColor: root.bar ? root.bar.barForeground : Color.foreground
+        // barColor left at the Spectrum default (theme accent).
         gap: Math.max(1, Style.space(2))
         minBar: 0
       }

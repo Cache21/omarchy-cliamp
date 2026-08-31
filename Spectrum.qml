@@ -10,7 +10,15 @@ Item {
   id: root
 
   property var bands: []
-  property color barColor: Color.foreground
+  // Default: the theme accent (Omarchy derives it from the theme's `accent`
+  // key or ANSI color4/blue), so the bars pick up e.g. Catppuccin blue. Falls
+  // back to `urgent` on the rare theme whose accent equals the foreground, so
+  // the spectrum never blends into the white now-playing text in front of it.
+  property color barColor: {
+    var a = Color.accent, f = Color.foreground
+    var d = Math.abs(a.r - f.r) + Math.abs(a.g - f.g) + Math.abs(a.b - f.b)
+    return d > 0.22 ? a : Color.urgent
+  }
   property real gap: Math.max(1, Math.round(width / 90))
   property real minBar: 1
   // 0 = derive a sensible column count from the available width.

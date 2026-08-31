@@ -142,7 +142,7 @@ Panel {
           visible: root.active && root.showPanelSpectrum && root.svc.visBands.length > 0
           peaks: true
           bands: root.svc ? root.svc.visBands : []
-          barColor: Color.accent
+          // barColor left at the Spectrum default (theme accent).
           gap: Math.max(1, Style.space(3))
           minBar: 2
         }
