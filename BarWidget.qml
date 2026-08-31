@@ -21,6 +21,14 @@ BarWidget {
   readonly property bool showBarThumbnail: setting("showBarThumbnail", true) === true
   readonly property bool showBarSpectrum: setting("showBarSpectrum", true) === true
   readonly property real barSpectrumOpacity: Math.max(0.05, Math.min(0.9, Number(setting("barSpectrumOpacity", 25)) / 100))
+  readonly property bool showVolumeOsd: setting("showVolumeOsd", true) === true
+
+  // Wheel -> volume: accumulate sub-notch deltas so a fast scroll counts every
+  // step, and show a transient volume slider below the widget.
+  property real wheelAccumulator: 0
+  property bool volOsdOpen: false
+  function bumpVolOsd() { volOsdOpen = true; volOsdHide.restart() }
+  Timer { id: volOsdHide; interval: 1100; onTriggered: root.volOsdOpen = false }
 
   readonly property bool active: !!svc && svc.running
   readonly property bool barSpectrumOn: showBarSpectrum && !!svc && svc.playing && svc.visBands.length > 0
@@ -85,6 +93,94 @@ BarWidget {
     }
   }
   function togglePanel() { if (panelLoader.item) panelLoader.item.toggle() }
+
+  // Transient volume slider shown below the widget while scrolling. xdg-popup
+  // in hover mode -> never takes keyboard focus, no focus grab. PopupCard does
+  // the bar-position-aware anchoring itself.
+  PopupCard {
+    id: volOsd
+    anchorItem: root
+    bar: root.bar
+    owner: root
+    triggerMode: "hover"
+    open: root.volOsdOpen && root.showVolumeOsd && !!root.svc && root.svc.running
+    contentWidth: Style.space(210)
+    contentHeight: volOsd.fittedContentHeight(osdCol.implicitHeight)
+
+    readonly property real volMin: -30
+    readonly property real volMax: 6
+    readonly property real volFrac: root.svc
+      ? Math.max(0, Math.min(1, (root.svc.volumeDb - volMin) / (volMax - volMin)))
+      : 0
+    readonly property real zeroFrac: (0 - volMin) / (volMax - volMin) // +0 dB -> ~0.833
+
+    Column {
+      id: osdCol
+      anchors.fill: parent
+      spacing: Style.space(6)
+
+      Row {
+        width: parent.width
+        Text {
+          id: osdLabel
+          text: "Volumen"
+          color: Color.popups.text
+          font.family: root.bar ? root.bar.fontFamily : Style.font.family
+          font.pixelSize: Style.font.caption
+        }
+        Item { width: parent.width - osdLabel.width - osdValue.width; height: 1 }
+        Text {
+          id: osdValue
+          text: Model.fmtVolume(root.svc ? root.svc.volumeDb : 0)
+          color: Qt.darker(Color.popups.text, 1.2)
+          font.family: root.bar ? root.bar.fontFamily : Style.font.family
+          font.pixelSize: Style.font.caption
+        }
+      }
+
+      Item {
+        width: parent.width
+        height: Style.space(14)
+
+        Rectangle {
+          id: osdTrack
+          anchors.verticalCenter: parent.verticalCenter
+          anchors.left: parent.left
+          anchors.right: parent.right
+          height: Style.space(4)
+          radius: height / 2
+          color: Util.alpha(Color.popups.text, 0.3)
+        }
+        Rectangle {
+          anchors.verticalCenter: osdTrack.verticalCenter
+          anchors.left: osdTrack.left
+          height: osdTrack.height
+          radius: osdTrack.radius
+          color: Color.accent
+          width: osdTrack.width * volOsd.volFrac
+          Behavior on width { NumberAnimation { duration: 110; easing.type: Easing.OutCubic } }
+        }
+        // Fixed mark at +0 dB (the default).
+        Rectangle {
+          width: Math.max(1, Style.space(2))
+          height: osdTrack.height + Style.space(6)
+          radius: 1
+          color: Color.popups.text
+          anchors.verticalCenter: osdTrack.verticalCenter
+          x: Math.round(osdTrack.width * volOsd.zeroFrac - width / 2)
+        }
+        Rectangle {
+          width: Style.space(12)
+          height: width
+          radius: width / 2
+          color: root.bar ? root.bar.foreground : Color.popups.text
+          anchors.verticalCenter: osdTrack.verticalCenter
+          x: Math.max(0, Math.min(osdTrack.width - width, osdTrack.width * volOsd.volFrac - width / 2))
+          Behavior on x { NumberAnimation { duration: 110; easing.type: Easing.OutCubic } }
+        }
+      }
+    }
+  }
 
   // Spectrum spans the whole widget (behind the thumbnail/glyph AND the label).
   // Declared before `contents` so it paints underneath; the opaque thumbnail
@@ -237,8 +333,12 @@ BarWidget {
                                                                           root.svc ? { known: root.svc.ytRadioKnown, enabled: root.svc.ytRadioEnabled } : null))
     onExited: if (root.bar) root.bar.hideTooltip(root)
     onWheel: function (wheel) {
-      if (!root.svc) return
-      root.svc.nudgeVolume(wheel.angleDelta.y > 0 ? 1 : -1)
+      if (!root.svc || !root.svc.running) return
+      var w = Util.wheelSteps(root.wheelAccumulator, wheel.angleDelta.y)
+      root.wheelAccumulator = w.remainder
+      if (w.steps === 0) return
+      root.svc.nudgeVolume(w.steps)
+      if (root.showVolumeOsd) root.bumpVolOsd()
     }
     onClicked: function (mouse) {
       if (root.bar) root.bar.hideTooltip(root)

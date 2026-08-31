@@ -36,6 +36,12 @@ Item {
   property real positionSec: 0
   property real durationSec: 0
   property real volumeDb: 0
+  // Optimistic-volume state (pattern from omarchy.monitor's brightness): the
+  // widget/scroll updates volumeDb instantly and the actual `cliamp volume`
+  // call is coalesced so a fast scroll doesn't spawn one process per notch.
+  property real pendingVolumeDb: 0
+  property bool volumeSetQueued: false
+  property real _volWriteAt: 0
   property bool shuffle: false
   property string repeat: "off"           // off | all | one
   property string themeName: ""
@@ -131,7 +137,10 @@ Item {
     root.isStream = s.isStream
     root.positionSec = s.positionSec
     root.durationSec = s.durationSec
-    root.volumeDb = s.volumeDb
+    // Don't let a stale poll stomp a volume we just set locally (optimistic
+    // value); only reconcile external changes once things have settled.
+    if (Date.now() - root._volWriteAt > 1500 && !setVolumeProc.running && !root.volumeSetQueued)
+      root.volumeDb = s.volumeDb
     root.shuffle = s.shuffle
     root.repeat = s.repeat
     root.themeName = s.themeName
@@ -211,12 +220,34 @@ Item {
   function seekTo(sec) { _run(["seek", String(Math.max(0, Math.round(sec)))]) }
 
   // `cliamp volume <dB>` is an absolute set (verified live: -6 -> -6, +2 -> 2),
-  // range [-30, +6].
+  // range [-30, +6]. Optimistic + coalesced: the local value moves immediately;
+  // while a `cliamp volume` is in flight, further calls just update the target
+  // and the in-flight process drains to the latest on exit.
+  Process {
+    id: setVolumeProc
+    onRunningChanged: {
+      if (!running && root.volumeSetQueued) {
+        root.volumeSetQueued = false
+        root._writeVolume(root.pendingVolumeDb)
+      }
+    }
+  }
+  function _writeVolume(v) {
+    setVolumeProc.command = [root.cliampBin, "volume", String(v)]
+    setVolumeProc.running = true
+    root._volWriteAt = Date.now()
+  }
   function setVolume(db) {
     var v = Math.max(-30, Math.min(6, Math.round(db)))
-    _run(["volume", String(v)])
+    root.volumeDb = v
+    root.pendingVolumeDb = v
+    root._volWriteAt = Date.now()
+    if (setVolumeProc.running) { root.volumeSetQueued = true; return }
+    root._writeVolume(v)
   }
-  function nudgeVolume(delta) { setVolume((root.volumeDb || 0) + delta) }
+  // steps = signed integer notch count (1 notch = 1 dB); reads the optimistic
+  // local value so a burst of notches in one tick all count.
+  function nudgeVolume(steps) { setVolume((root.volumeDb || 0) + steps) }
 
   function toggleShuffle() { _run(["shuffle", "toggle"]) }
   function cycleRepeat() { _run(["repeat", "cycle"]) }

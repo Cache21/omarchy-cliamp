@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "io.github.cache21.cliamp",
   "name": "cliamp",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "author": "Manuel Artia",
   "license": "MIT",
   "description": "Now-playing y controles de cliamp en la barra de Omarchy, con panel de transporte, toggle de la radio infinita (yt-radio) y keybinds por IPC.",
@@ -29,7 +29,8 @@
       "barSpectrumOpacity": 25,
       "showPanelSpectrum": true,
       "showPanelSearch": true,
-      "searchResultCount": 12
+      "searchResultCount": 12,
+      "showVolumeOsd": true
     },
     "schema": [
       {
@@ -120,6 +121,13 @@
         "max": 25,
         "step": 1,
         "defaultValue": 12
+      },
+      {
+        "key": "showVolumeOsd",
+        "type": "boolean",
+        "label": "Slider de volumen al scrollear",
+        "description": "Muestra un mini-slider debajo del widget (con marca en 0 dB) mientras ajustás el volumen con la rueda del mouse.",
+        "defaultValue": true
       }
     ]
   }
