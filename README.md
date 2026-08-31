@@ -18,7 +18,13 @@ loaded, and IPC methods for Hyprland keybinds.
   - scroll — volume ±1 dB
 - **Panel** — 84px cover art, a full-width audio spectrum, seekable progress bar
   (or "En vivo" for streams), prev / play-pause / next / stop, shuffle and repeat,
-  a volume slider, and the yt-radio toggle.
+  a volume slider, the yt-radio toggle, and a **YouTube search**.
+- **YouTube search** — a "Buscar en YouTube" button in the panel (or the `/` key)
+  opens a search box; results come from `yt-dlp "ytsearchN:…" --flat-playlist`
+  (thumbnail + title + channel + duration). Click a result (or ↑/↓ + Enter) to
+  **play it now** — the plugin queues it and steps `next` through the queue until it
+  lands (best-effort; works best with the TUI, and even when yt-radio keeps
+  refilling the queue). The **`+`** button just enqueues it (`cliamp queue`).
 - **Cover art** — for YouTube / YouTube Music tracks the video id in `track.path`
   becomes an `i.ytimg.com` thumbnail; local files use cliamp's embedded
   `album_art_url`; radio streams fall back to a glyph.
@@ -36,6 +42,7 @@ loaded, and IPC methods for Hyprland keybinds.
 
 - Omarchy 4 (Quattro) with the omarchy-shell plugin system.
 - `cliamp` ≥ 1.63 on `PATH` (Arch package `cliamp`).
+- `yt-dlp` on `PATH` (already a `cliamp` dependency) for the YouTube search.
 - Optional: the `yt-radio` cliamp plugin for the infinite-radio toggle.
 - JetBrainsMono Nerd Font (ships with Omarchy) for the transport glyphs.
 
@@ -64,6 +71,8 @@ Set from the Omarchy menu → Setup → Bar, or in `~/.config/omarchy/shell.json
 | `showBarSpectrum` | boolean | `true` | Draw the audio spectrum behind the now-playing text while music plays. |
 | `barSpectrumOpacity` | integer | `25` | How visible the bar spectrum is (10–80 %). Lower = more readable text. |
 | `showPanelSpectrum` | boolean | `true` | Show the large spectrum strip in the panel (only while the panel is open). |
+| `showPanelSearch` | boolean | `true` | Show the "Buscar en YouTube" button in the panel (`/` also opens search). |
+| `searchResultCount` | integer | `12` | Results per YouTube search (`ytsearchN`), 5–25. |
 
 Two extra keys are read from `shell.json` but not shown in the settings form
 (rarely needed): `cliampPath` (default `cliamp`) and `ytRadioPlugin` (default
