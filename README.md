@@ -81,17 +81,20 @@ omarchy plugin remove io.github.cache21.cliamp
 ## Development
 
 ```bash
-ln -s "$PWD" ~/.config/omarchy/plugins/io.github.cache21.cliamp
+# work on a clone at ~/.config/omarchy/plugins/<id> directly (a symlinked
+# folder loads fine but `omarchy plugin validate` rejects symlinks):
+git clone https://github.com/Cache21/omarchy-cliamp ~/.config/omarchy/plugins/io.github.cache21.cliamp
 omarchy-shell shell rescanPlugins
 omarchy plugin enable io.github.cache21.cliamp --section right --before omarchy.tray
 
 omarchy plugin validate .
-qmllint -I "$OMARCHY_PATH/shell" *.qml
-node tests/model.test.js        # pure-JS helpers in Model.js
+qmllint -I "$OMARCHY_PATH/shell" *.qml   # 255/no-output on Service.qml is a
+                                        # qmllint 1.0 quirk with relative .js imports
+node tests/model.test.js                # pure-JS helpers in Model.js
 ```
 
 Saving a file under `~/.config/omarchy/plugins/` hot-reloads it; changes to
-`Panel.qml` (loaded inside the bar widget's `Loader`) may need
+`Panel.qml` (loaded inside the bar widget's `Loader`) usually need
 `omarchy-restart-shell`.
 
 ## Notes
