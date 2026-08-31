@@ -16,6 +16,16 @@ Panel {
   readonly property bool active: !!svc && svc.running
   readonly property bool hasDuration: !!svc && svc.durationSec > 0
   readonly property string panelArtUrl: (svc && svc.running) ? Model.artUrl(svc.snapshot, "panel") : ""
+  readonly property bool showPanelSpectrum: setting("showPanelSpectrum", true) === true
+
+  // Hold the shared visstream on the service only while the popup is open.
+  property bool visHeld: false
+  onOpenedChanged: {
+    if (!svc) return
+    if (opened && !visHeld) { svc.acquireVis(); visHeld = true }
+    else if (!opened && visHeld) { svc.releaseVis(); visHeld = false }
+  }
+  Component.onDestruction: if (visHeld && svc) svc.releaseVis()
 
   KeyboardPanel {
     id: panel
@@ -116,6 +126,18 @@ Panel {
               font.pixelSize: Style.font.caption
             }
           }
+        }
+
+        // ---- spectrum ----
+        Spectrum {
+          width: parent.width
+          height: Style.space(56)
+          visible: root.active && root.showPanelSpectrum && root.svc.visBands.length > 0
+          peaks: true
+          bands: root.svc ? root.svc.visBands : []
+          barColor: Color.accent
+          gap: Math.max(1, Style.space(3))
+          minBar: 2
         }
 
         PanelSeparator { foreground: root.bar.foreground }

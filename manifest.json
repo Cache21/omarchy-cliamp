@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "io.github.cache21.cliamp",
   "name": "cliamp",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "author": "Manuel Artia",
   "license": "MIT",
   "description": "Now-playing y controles de cliamp en la barra de Omarchy, con panel de transporte, toggle de la radio infinita (yt-radio) y keybinds por IPC.",
@@ -24,7 +24,10 @@
       "showArtist": true,
       "hideWhenStopped": false,
       "showYtRadioDot": true,
-      "showBarThumbnail": true
+      "showBarThumbnail": true,
+      "showBarSpectrum": true,
+      "barSpectrumOpacity": 35,
+      "showPanelSpectrum": true
     },
     "schema": [
       {
@@ -73,6 +76,30 @@
         "type": "boolean",
         "label": "Miniatura en la barra",
         "description": "Muestra la carátula del tema (thumbnail de YouTube Music o art embebido) en vez del ícono. Cae al ícono si no hay imagen.",
+        "defaultValue": true
+      },
+      {
+        "key": "showBarSpectrum",
+        "type": "boolean",
+        "label": "Espectro en la barra",
+        "description": "Dibuja el espectro de audio (cliamp visstream) detrás del texto de now-playing mientras suena música.",
+        "defaultValue": true
+      },
+      {
+        "key": "barSpectrumOpacity",
+        "type": "integer",
+        "label": "Opacidad del espectro de la barra (%)",
+        "description": "Qué tan visible es el espectro detrás del texto. Más bajo = texto más legible.",
+        "min": 10,
+        "max": 80,
+        "step": 5,
+        "defaultValue": 35
+      },
+      {
+        "key": "showPanelSpectrum",
+        "type": "boolean",
+        "label": "Espectro en el panel",
+        "description": "Muestra una tira de espectro grande en el panel desplegable (solo mientras el panel está abierto).",
         "defaultValue": true
       }
     ]

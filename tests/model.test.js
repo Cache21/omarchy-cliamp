@@ -95,6 +95,18 @@ eq(M.artUrl({ running: true, albumArtUrl: "file:///home/x/cover.jpg", path: "/ho
 eq(M.artUrl({ running: true, path: "http://radio.cliamp.stream/lofi/stream" }, "bar"),
   "", "radio -> no art")
 
+// ---- sampleBands ----
+console.log("sampleBands")
+eq(M.sampleBands([], 4), [0, 0, 0, 0], "empty src -> zeros of length n")
+eq(M.sampleBands(null, 3), [0, 0, 0], "non-array src -> zeros")
+eq(M.sampleBands([0.5, 0.5], 0), [], "n=0 -> empty array")
+eq(M.sampleBands([0.2, 0.4, 0.6, 0.8], 4), [0.2, 0.4, 0.6, 0.8], "same length -> passthrough")
+eq(M.sampleBands([0, 1, 0, 1], 2), [0.5, 0.5], "downsample 4->2 averages pairs")
+eq(M.sampleBands([0.1, 0.9], 4), [0.1, 0.1, 0.9, 0.9], "upsample 2->4 repeats")
+eq(M.sampleBands([2, -1, 0.5], 3), [1, 0, 0.5], "clamps out-of-range values to [0,1]")
+eq(M.sampleBands([0.6, 0.47, 0.34, 0.43, 0.36, 0.17, 0.12, 0.06, 0, 0], 5).length, 5,
+  "10 real bands -> exactly 5 buckets")
+
 // ---- parseYtRadioStatus ----
 console.log("parseYtRadioStatus")
 eq(M.parseYtRadioStatus(""), { known: false, enabled: false }, "empty -> unknown")

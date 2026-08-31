@@ -19,8 +19,25 @@ BarWidget {
   readonly property bool showYtRadioDot: setting("showYtRadioDot", true) === true
   readonly property bool hideWhenStopped: setting("hideWhenStopped", false) === true
   readonly property bool showBarThumbnail: setting("showBarThumbnail", true) === true
+  readonly property bool showBarSpectrum: setting("showBarSpectrum", true) === true
+  readonly property real barSpectrumOpacity: Math.max(0.05, Math.min(0.9, Number(setting("barSpectrumOpacity", 35)) / 100))
 
   readonly property bool active: !!svc && svc.running
+  readonly property bool barSpectrumOn: showBarSpectrum && !!svc && svc.playing && svc.visBands.length > 0
+
+  // Ref-count the shared visstream on the service: hold it whenever the bar
+  // spectrum is enabled and cliamp is up (Service gates the actual process on
+  // `playing` too). Released when no longer wanted and on destruction.
+  property bool visHeld: false
+  readonly property bool visWant: showBarSpectrum && !!svc && svc.running
+  onVisWantChanged: syncVis()
+  function syncVis() {
+    if (!svc) return
+    if (visWant && !visHeld) { svc.acquireVis(); visHeld = true }
+    else if (!visWant && visHeld) { svc.releaseVis(); visHeld = false }
+  }
+  Component.onDestruction: if (visHeld && svc) svc.releaseVis()
+
   readonly property string barArtUrl: (svc && svc.running && showBarThumbnail) ? Model.artUrl(svc.snapshot, "bar") : ""
   readonly property string displayText: {
     if (!svc || !svc.running) return "cliamp"
@@ -39,9 +56,9 @@ BarWidget {
     var yt = setting("ytRadioPlugin", "")
     if (yt) svc.ytRadioName = String(yt)
   }
-  onSvcChanged: syncService()
+  onSvcChanged: { syncService(); syncVis() }
   onSettingsChanged: syncService()
-  Component.onCompleted: syncService()
+  Component.onCompleted: { syncService(); syncVis() }
 
   function injectPanel() {
     var t = panelLoader.item
@@ -141,11 +158,28 @@ BarWidget {
     Item {
       id: labelClip
       readonly property bool overflow: label.implicitWidth > root.maxLabelWidth
-      width: Math.min(root.maxLabelWidth, label.implicitWidth)
-      height: label.implicitHeight
+      // Widen to a small floor while the spectrum is behind the text so the
+      // bars aren't cramped when the title is short.
+      width: Math.min(root.maxLabelWidth,
+                      root.barSpectrumOn ? Math.max(label.implicitWidth, Style.space(96))
+                                         : label.implicitWidth)
+      height: root.barSize
       anchors.verticalCenter: parent.verticalCenter
       clip: true
       visible: !root.vertical
+
+      // Spectrum sits behind the label (declared first = painted first).
+      Spectrum {
+        anchors.fill: parent
+        anchors.topMargin: Style.space(3)
+        anchors.bottomMargin: Style.space(3)
+        visible: root.barSpectrumOn
+        opacity: root.barSpectrumOpacity
+        bands: root.svc ? root.svc.visBands : []
+        barColor: root.bar ? root.bar.barForeground : Color.foreground
+        gap: Math.max(1, Style.space(2))
+        minBar: 1
+      }
 
       Text {
         id: label

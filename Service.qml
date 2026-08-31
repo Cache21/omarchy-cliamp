@@ -44,6 +44,19 @@ Item {
   property bool ytRadioKnown: false
   property bool ytRadioEnabled: false
 
+  // --- spectrum (cliamp visstream) -----------------------------------
+  // Latest frame's normalized bands (~0..1, variable length). Consumers
+  // resample with Model.sampleBands(). One visstream process for the whole
+  // shell — never per BarWidget — so cliamp runs its FFT for a single client.
+  property var visBands: []
+  readonly property int visFps: 24
+  // Ref-counted "someone wants the spectrum" flag: each BarWidget / Panel
+  // acquires while it needs frames and releases (also on destruction).
+  property int _visRefs: 0
+  readonly property bool visWanted: _visRefs > 0
+  function acquireVis() { _visRefs++ }
+  function releaseVis() { _visRefs = Math.max(0, _visRefs - 1) }
+
   readonly property bool playing: running && state === "playing"
 
   // status snapshot in the shape Model.* helpers expect
@@ -90,6 +103,7 @@ Item {
       root.volumeDb = 0; root.shuffle = false; root.repeat = "off"
       root.themeName = ""; root.total = 0
       root.ytRadioKnown = false; root.ytRadioEnabled = false
+      root.visBands = []
       return
     }
     root.running = true
@@ -202,6 +216,36 @@ Item {
     interval: 400
     repeat: false
     onTriggered: if (root.running && !ytRadioProc.running) ytRadioProc.running = true
+  }
+
+  // ---- spectrum stream ---------------------------------------------
+  // `cliamp visstream` is an infinite NDJSON stream (one {"ok":..,"bands":[..]}
+  // per line). Gate it on visWanted && playing so it only runs when something
+  // is on screen and there's audio; the Timer re-arms it after the daemon/TUI
+  // restarts (pattern from bjarneo/omarchy-shell-plugins cliamp/BandStream.qml).
+  Process {
+    id: visProc
+    running: root.visWanted && root.playing
+    command: [root.cliampBin, "visstream", "--fps", String(root.visFps)]
+    stdout: SplitParser {
+      splitMarker: "\n"
+      onRead: function (line) {
+        if (!line) return
+        try {
+          var f = JSON.parse(line)
+          if (f && f.ok && Array.isArray(f.bands) && f.bands.length)
+            root.visBands = f.bands
+        } catch (e) {}
+      }
+    }
+    onExited: root.visBands = []
+  }
+
+  Timer {
+    interval: 2000
+    running: root.visWanted && root.playing && !visProc.running
+    repeat: true
+    onTriggered: visProc.running = true
   }
 
   Component.onCompleted: refresh()

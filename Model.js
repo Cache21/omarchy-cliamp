@@ -149,6 +149,35 @@ function artUrl(st, size) {
   return "https://i.ytimg.com/vi/" + id + "/" + (size === "panel" ? "hqdefault" : "mqdefault") + ".jpg"
 }
 
+// ---- spectrum -------------------------------------------------------
+
+// Resample an arbitrary-length band array (from `cliamp visstream`) to exactly
+// `n` buckets by averaging each source range, clamped to [0, 1]. A missing /
+// empty / non-array `src`, or n <= 0, yields an all-zero array of length
+// max(n, 0) — so the renderer always gets a stable-length model and just
+// flattens to the baseline when there's no data.
+function sampleBands(src, n) {
+  n = Math.max(0, Math.floor(n) || 0)
+  var out = new Array(n)
+  for (var i = 0; i < n; i++) out[i] = 0
+  if (!Array.isArray(src) || src.length === 0 || n === 0) return out
+
+  for (var b = 0; b < n; b++) {
+    var start = Math.floor(b * src.length / n)
+    var end = Math.floor((b + 1) * src.length / n)
+    if (end <= start) end = start + 1
+    var sum = 0, count = 0
+    for (var k = start; k < end && k < src.length; k++) {
+      var v = Number(src[k])
+      if (!isFinite(v)) v = 0
+      sum += v < 0 ? 0 : (v > 1 ? 1 : v)
+      count++
+    }
+    out[b] = count ? sum / count : 0
+  }
+  return out
+}
+
 // ---- yt-radio ----------------------------------------------------------
 
 // Parse the reply of `cliamp plugins call yt-radio status` (or `toggle`).
@@ -178,6 +207,7 @@ if (typeof module !== "undefined" && module.exports) {
     fmtTime: fmtTime,
     fmtVolume: fmtVolume,
     repeatLabel: repeatLabel,
+    sampleBands: sampleBands,
     parseYtRadioStatus: parseYtRadioStatus
   }
 }
