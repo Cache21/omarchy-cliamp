@@ -23,7 +23,8 @@
       "maxLabelWidth": 220,
       "showArtist": true,
       "hideWhenStopped": false,
-      "showYtRadioDot": true
+      "showYtRadioDot": true,
+      "showBarThumbnail": true
     },
     "schema": [
       {
@@ -65,6 +66,13 @@
         "type": "boolean",
         "label": "Indicador de yt-radio",
         "description": "Muestra un punto de acento junto al ícono cuando la radio infinita (yt-radio) está activa.",
+        "defaultValue": true
+      },
+      {
+        "key": "showBarThumbnail",
+        "type": "boolean",
+        "label": "Miniatura en la barra",
+        "description": "Muestra la carátula del tema (thumbnail de YouTube Music o art embebido) en vez del ícono. Cae al ícono si no hay imagen.",
         "defaultValue": true
       }
     ]

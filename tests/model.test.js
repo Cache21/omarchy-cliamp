@@ -78,6 +78,23 @@ eq(M.repeatLabel("all"), "Todo", "repeatLabel all")
 eq(M.repeatLabel("one"), "Una", "repeatLabel one")
 eq(M.repeatLabel("off"), "Off", "repeatLabel off")
 
+// ---- youtubeIdFromPath / artUrl ----
+console.log("youtubeIdFromPath / artUrl")
+eq(M.youtubeIdFromPath("https://www.youtube.com/watch?v=dQw4w9WgXcQ"), "dQw4w9WgXcQ", "youtube.com watch?v")
+eq(M.youtubeIdFromPath("https://music.youtube.com/watch?v=abc123_-XY&list=RDwhatever"), "abc123_-XY", "music.youtube.com with &list")
+eq(M.youtubeIdFromPath("https://youtu.be/dQw4w9WgXcQ"), "dQw4w9WgXcQ", "youtu.be short link")
+eq(M.youtubeIdFromPath("http://radio.cliamp.stream/lofi/stream"), "", "radio stream -> no id")
+eq(M.youtubeIdFromPath(""), "", "empty -> no id")
+eq(M.artUrl(null, "bar"), "", "null -> no art")
+eq(M.artUrl({ running: true, path: "https://www.youtube.com/watch?v=dQw4w9WgXcQ" }, "bar"),
+  "https://i.ytimg.com/vi/dQw4w9WgXcQ/mqdefault.jpg", "bar size -> mqdefault")
+eq(M.artUrl({ running: true, path: "https://www.youtube.com/watch?v=dQw4w9WgXcQ" }, "panel"),
+  "https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg", "panel size -> hqdefault")
+eq(M.artUrl({ running: true, albumArtUrl: "file:///home/x/cover.jpg", path: "/home/x/song.flac" }, "panel"),
+  "file:///home/x/cover.jpg", "local file -> cliamp's album_art_url wins")
+eq(M.artUrl({ running: true, path: "http://radio.cliamp.stream/lofi/stream" }, "bar"),
+  "", "radio -> no art")
+
 // ---- parseYtRadioStatus ----
 console.log("parseYtRadioStatus")
 eq(M.parseYtRadioStatus(""), { known: false, enabled: false }, "empty -> unknown")

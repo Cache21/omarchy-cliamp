@@ -18,8 +18,10 @@ BarWidget {
   readonly property bool showArtist: setting("showArtist", true) === true
   readonly property bool showYtRadioDot: setting("showYtRadioDot", true) === true
   readonly property bool hideWhenStopped: setting("hideWhenStopped", false) === true
+  readonly property bool showBarThumbnail: setting("showBarThumbnail", true) === true
 
   readonly property bool active: !!svc && svc.running
+  readonly property string barArtUrl: (svc && svc.running && showBarThumbnail) ? Model.artUrl(svc.snapshot, "bar") : ""
   readonly property string displayText: {
     if (!svc || !svc.running) return "cliamp"
     return Model.nowPlayingLabel(svc.snapshot, root.showArtist) || "cliamp"
@@ -72,25 +74,61 @@ BarWidget {
     spacing: Style.space(6)
 
     Item {
-      width: glyphText.implicitWidth + (dot.visible ? dot.width + Style.space(3) : 0)
-      height: glyphText.implicitHeight
+      id: lead
+      readonly property real artSize: Math.max(12, root.barSize - Style.space(8))
+      readonly property bool thumbShown: root.barArtUrl !== "" && thumb.status === Image.Ready
+      width: mark.width + (dot.visible ? dot.width + Style.space(3) : 0)
+      height: root.barSize
       anchors.verticalCenter: parent.verticalCenter
 
-      Text {
-        id: glyphText
-        text: root.glyph
-        color: root.active ? (root.bar ? root.bar.barForeground : Color.foreground)
-                           : Qt.darker(root.bar ? root.bar.barForeground : Color.foreground, 1.8)
-        font.family: root.bar ? root.bar.fontFamily : Style.font.family
-        font.pixelSize: Style.font.body
-        anchors.verticalCenter: parent.verticalCenter
+      Item {
+        id: mark
+        width: lead.thumbShown ? lead.artSize : glyphText.implicitWidth
+        height: root.barSize
+
+        // Cover art: YouTube Music thumbnail or embedded art. Loads while
+        // hidden and swaps in once ready; otherwise the glyph stays.
+        Rectangle {
+          id: thumbBox
+          anchors.verticalCenter: parent.verticalCenter
+          width: lead.artSize
+          height: lead.artSize
+          radius: Style.space(3)
+          visible: lead.thumbShown
+          color: root.bar ? Style.normalFillFor(root.bar.barForeground, Color.accent) : "transparent"
+
+          Image {
+            id: thumb
+            anchors.fill: parent
+            anchors.margins: 1
+            source: root.barArtUrl
+            sourceSize.width: 96
+            sourceSize.height: 96
+            fillMode: Image.PreserveAspectCrop
+            asynchronous: true
+            cache: true
+            smooth: true
+          }
+        }
+
+        Text {
+          id: glyphText
+          visible: !lead.thumbShown
+          text: root.glyph
+          color: root.active ? (root.bar ? root.bar.barForeground : Color.foreground)
+                             : Qt.darker(root.bar ? root.bar.barForeground : Color.foreground, 1.8)
+          font.family: root.bar ? root.bar.fontFamily : Style.font.family
+          font.pixelSize: Style.font.body
+          anchors.verticalCenter: parent.verticalCenter
+        }
       }
+
       Rectangle {
         id: dot
         visible: root.ytDot
         width: Style.space(6); height: width; radius: width / 2
         color: Color.accent
-        anchors.left: glyphText.right
+        anchors.left: mark.right
         anchors.leftMargin: Style.space(3)
         anchors.verticalCenter: parent.verticalCenter
       }

@@ -30,6 +30,8 @@ Item {
   property string artist: ""
   property string album: ""
   property string station: ""
+  property string path: ""
+  property string albumArtUrl: ""
   property bool isStream: false
   property real positionSec: 0
   property real durationSec: 0
@@ -47,7 +49,8 @@ Item {
   // status snapshot in the shape Model.* helpers expect
   readonly property var snapshot: ({
     running: root.running, state: root.state, title: root.title, artist: root.artist,
-    album: root.album, station: root.station, isStream: root.isStream,
+    album: root.album, station: root.station, path: root.path, albumArtUrl: root.albumArtUrl,
+    isStream: root.isStream,
     positionSec: root.positionSec, durationSec: root.durationSec, volumeDb: root.volumeDb,
     shuffle: root.shuffle, repeat: root.repeat, themeName: root.themeName, total: root.total
   })
@@ -81,6 +84,7 @@ Item {
       root.running = false
       root.state = "stopped"
       root.title = ""; root.artist = ""; root.album = ""; root.station = ""
+      root.path = ""; root.albumArtUrl = ""
       root.isStream = false
       root.positionSec = 0; root.durationSec = 0
       root.volumeDb = 0; root.shuffle = false; root.repeat = "off"
@@ -94,6 +98,8 @@ Item {
     root.artist = s.artist
     root.album = s.album
     root.station = s.station
+    root.path = s.path
+    root.albumArtUrl = s.albumArtUrl
     root.isStream = s.isStream
     root.positionSec = s.positionSec
     root.durationSec = s.durationSec

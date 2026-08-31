@@ -29,6 +29,8 @@ function parseStatus(jsonText) {
     artist: String(track.artist || ""),
     album: String(track.album || ""),
     station: String(track.station || ""),
+    path: String(track.path || ""),
+    albumArtUrl: String(track.album_art_url || ""),
     isStream: !!track.stream,
     positionSec: num(obj.position),
     durationSec: num(obj.duration) || num(track.duration_secs),
@@ -123,6 +125,30 @@ function repeatLabel(mode) {
   return "Off"
 }
 
+// ---- cover art -------------------------------------------------------
+
+// YouTube / YouTube Music video id out of a cliamp track path
+// (https://www.youtube.com/watch?v=ID , https://music.youtube.com/watch?v=ID ,
+//  https://youtu.be/ID). "" when the path isn't a YouTube URL.
+function youtubeIdFromPath(path) {
+  var s = String(path || "")
+  var m = s.match(/[?&]v=([A-Za-z0-9_-]{6,})/) || s.match(/youtu\.be\/([A-Za-z0-9_-]{6,})/)
+  return m ? m[1] : ""
+}
+
+// Best-effort cover art URL for the current track:
+//   - local files       -> cliamp's own album_art_url (file:// or data:)
+//   - YouTube (Music)    -> the video thumbnail from i.ytimg.com
+//   - radio / other      -> "" (caller falls back to a glyph)
+// size: "panel" (hqdefault 480x360) or "bar" (mqdefault 320x180).
+function artUrl(st, size) {
+  if (!st || !st.running) return ""
+  if (st.albumArtUrl) return st.albumArtUrl
+  var id = youtubeIdFromPath(st.path)
+  if (!id) return ""
+  return "https://i.ytimg.com/vi/" + id + "/" + (size === "panel" ? "hqdefault" : "mqdefault") + ".jpg"
+}
+
 // ---- yt-radio ----------------------------------------------------------
 
 // Parse the reply of `cliamp plugins call yt-radio status` (or `toggle`).
@@ -143,6 +169,8 @@ if (typeof module !== "undefined" && module.exports) {
   module.exports = {
     parseStatus: parseStatus,
     normalizeRepeat: normalizeRepeat,
+    youtubeIdFromPath: youtubeIdFromPath,
+    artUrl: artUrl,
     nowPlayingLabel: nowPlayingLabel,
     tooltipText: tooltipText,
     stateLabel: stateLabel,

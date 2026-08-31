@@ -15,6 +15,7 @@ Panel {
   readonly property var svc: bar && bar.shell ? bar.shell.serviceFor("io.github.cache21.cliamp") : null
   readonly property bool active: !!svc && svc.running
   readonly property bool hasDuration: !!svc && svc.durationSec > 0
+  readonly property string panelArtUrl: (svc && svc.running) ? Model.artUrl(svc.snapshot, "panel") : ""
 
   KeyboardPanel {
     id: panel
@@ -45,31 +46,76 @@ Panel {
         spacing: Style.space(12)
 
         // ---- header ----
-        Text {
+        Row {
           width: parent.width
-          text: root.active ? (root.svc.title || root.svc.station || "cliamp") : "cliamp no está corriendo"
-          color: root.bar.foreground
-          font.family: root.bar.fontFamily
-          font.pixelSize: Style.font.title
-          font.bold: true
-          elide: Text.ElideRight
-        }
-        Text {
-          width: parent.width
-          visible: root.active && root.svc.artist !== ""
-          text: root.svc ? root.svc.artist : ""
-          color: Qt.darker(root.bar.foreground, 1.3)
-          font.family: root.bar.fontFamily
-          font.pixelSize: Style.font.subtitle
-          elide: Text.ElideRight
-        }
-        Text {
-          width: parent.width
-          visible: root.active && root.svc.themeName !== ""
-          text: root.svc ? ("Tema: " + root.svc.themeName) : ""
-          color: Qt.darker(root.bar.foreground, 1.5)
-          font.family: root.bar.fontFamily
-          font.pixelSize: Style.font.caption
+          spacing: Style.space(12)
+
+          // Cover art (YouTube Music thumbnail or embedded art).
+          BorderSurface {
+            id: art
+            width: Style.space(84)
+            height: Style.space(84)
+            visible: root.active
+            radius: Style.space(4)
+            color: Style.normalFillFor(root.bar.foreground, Color.accent)
+            borderSpec: Border.controlSpec("normal", root.bar.foreground, Color.accent)
+
+            Image {
+              id: artImage
+              anchors.fill: parent
+              anchors.margins: Style.space(2)
+              source: root.panelArtUrl
+              sourceSize.width: 240
+              sourceSize.height: 240
+              fillMode: Image.PreserveAspectCrop
+              asynchronous: true
+              cache: true
+              visible: source !== "" && status === Image.Ready
+            }
+            Text {
+              anchors.centerIn: parent
+              visible: !artImage.visible
+              text: "󰝚"
+              color: Qt.darker(root.bar.foreground, 1.2)
+              font.family: root.bar.fontFamily
+              font.pixelSize: Style.font.displayLarge
+            }
+          }
+
+          Column {
+            width: parent.width - (art.visible ? art.width + Style.space(12) : 0)
+            spacing: Style.space(4)
+            anchors.verticalCenter: art.visible ? art.verticalCenter : undefined
+
+            Text {
+              width: parent.width
+              text: root.active ? (root.svc.title || root.svc.station || "cliamp") : "cliamp no está corriendo"
+              color: root.bar.foreground
+              font.family: root.bar.fontFamily
+              font.pixelSize: Style.font.title
+              font.bold: true
+              wrapMode: Text.WordWrap
+              maximumLineCount: 2
+              elide: Text.ElideRight
+            }
+            Text {
+              width: parent.width
+              visible: root.active && root.svc.artist !== ""
+              text: root.svc ? root.svc.artist : ""
+              color: Qt.darker(root.bar.foreground, 1.3)
+              font.family: root.bar.fontFamily
+              font.pixelSize: Style.font.subtitle
+              elide: Text.ElideRight
+            }
+            Text {
+              width: parent.width
+              visible: root.active && root.svc.themeName !== ""
+              text: root.svc ? ("Tema: " + root.svc.themeName) : ""
+              color: Qt.darker(root.bar.foreground, 1.5)
+              font.family: root.bar.fontFamily
+              font.pixelSize: Style.font.caption
+            }
+          }
         }
 
         PanelSeparator { foreground: root.bar.foreground }
