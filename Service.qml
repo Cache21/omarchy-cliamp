@@ -1,0 +1,230 @@
+import QtQuick
+import Quickshell
+import Quickshell.Io
+import "Model.js" as Model
+
+// Headless singleton (kind: service). Polls `cliamp status --json`, exposes the
+// parsed state as properties, and turns control calls into detached
+// `cliamp ...` subcommands. One instance for the whole shell; every BarWidget /
+// Panel instance reads it via bar.shell.serviceFor("io.github.cache21.cliamp").
+Item {
+  id: root
+
+  // Injected by omarchy-shell's service loader for first-party plugins; unused
+  // here but declared so the loader has somewhere to write.
+  property var shell: null
+
+  // --- config, pushed in by the bar widget from its settings -------------
+  property int refreshIntervalSec: 2
+  // cliampBin / ytRadioName are read from shell.json by the widget
+  // (setting("cliampPath") / setting("ytRadioPlugin")) and mirrored here.
+  // Not in the manifest schema on purpose — they're rarely-touched escape
+  // hatches, editable by hand in ~/.config/omarchy/shell.json.
+  property string cliampBin: "cliamp"
+  property string ytRadioName: "yt-radio"
+
+  // --- observed playback state -----------------------------------------
+  property bool running: false
+  property string state: "stopped"        // playing | paused | stopped
+  property string title: ""
+  property string artist: ""
+  property string album: ""
+  property string station: ""
+  property bool isStream: false
+  property real positionSec: 0
+  property real durationSec: 0
+  property real volumeDb: 0
+  property bool shuffle: false
+  property string repeat: "off"           // off | all | one
+  property string themeName: ""
+  property int total: 0
+
+  property bool ytRadioKnown: false
+  property bool ytRadioEnabled: false
+
+  readonly property bool playing: running && state === "playing"
+
+  // status snapshot in the shape Model.* helpers expect
+  readonly property var snapshot: ({
+    running: root.running, state: root.state, title: root.title, artist: root.artist,
+    album: root.album, station: root.station, isStream: root.isStream,
+    positionSec: root.positionSec, durationSec: root.durationSec, volumeDb: root.volumeDb,
+    shuffle: root.shuffle, repeat: root.repeat, themeName: root.themeName, total: root.total
+  })
+
+  // ---- polling --------------------------------------------------------
+
+  property int _tick: 0
+
+  function refresh() {
+    if (!statusProc.running) statusProc.running = true
+  }
+
+  Process {
+    id: statusProc
+    command: [root.cliampBin, "status", "--json"]
+    stdout: StdioCollector {
+      id: statusOut
+      waitForEnd: true
+      onStreamFinished: root._applyStatus(Model.parseStatus(text))
+    }
+    onExited: function (exitCode) {
+      // exitCode 1 with empty stdout == "cliamp is not running". The
+      // StdioCollector still fires onStreamFinished with "" -> parseStatus
+      // returns null -> _applyStatus clears everything. Nothing to do here.
+      if (exitCode !== 0 && !statusOut.text) root._applyStatus(null)
+    }
+  }
+
+  function _applyStatus(s) {
+    if (!s) {
+      root.running = false
+      root.state = "stopped"
+      root.title = ""; root.artist = ""; root.album = ""; root.station = ""
+      root.isStream = false
+      root.positionSec = 0; root.durationSec = 0
+      root.volumeDb = 0; root.shuffle = false; root.repeat = "off"
+      root.themeName = ""; root.total = 0
+      root.ytRadioKnown = false; root.ytRadioEnabled = false
+      return
+    }
+    root.running = true
+    root.state = s.state
+    root.title = s.title
+    root.artist = s.artist
+    root.album = s.album
+    root.station = s.station
+    root.isStream = s.isStream
+    root.positionSec = s.positionSec
+    root.durationSec = s.durationSec
+    root.volumeDb = s.volumeDb
+    root.shuffle = s.shuffle
+    root.repeat = s.repeat
+    root.themeName = s.themeName
+    root.total = s.total
+  }
+
+  Timer {
+    id: pollTimer
+    interval: Math.max(1, root.refreshIntervalSec) * 1000
+    running: true
+    repeat: true
+    triggeredOnStart: true
+    onTriggered: {
+      root.refresh()
+      // yt-radio lives only in the TUI; only probe it while cliamp is up, and
+      // at a third of the status cadence — its state changes rarely.
+      if (root.running && (root._tick % 3 === 0) && !ytRadioProc.running)
+        ytRadioProc.running = true
+      root._tick++
+    }
+  }
+
+  // Advance the position between polls so the panel scrubber moves smoothly at
+  // 1s granularity; every real poll resyncs it.
+  Timer {
+    interval: 1000
+    running: root.playing && root.durationSec > 0
+    repeat: true
+    onTriggered: if (root.positionSec < root.durationSec) root.positionSec += 1
+  }
+
+  // Short delay after issuing a control so the follow-up status read reflects it.
+  Timer {
+    id: bumpTimer
+    interval: 300
+    repeat: false
+    onTriggered: root.refresh()
+  }
+  function _bump() { bumpTimer.restart() }
+
+  Process {
+    id: ytRadioProc
+    command: [root.cliampBin, "plugins", "call", root.ytRadioName, "status"]
+    stdout: StdioCollector {
+      id: ytRadioOut
+      waitForEnd: true
+      onStreamFinished: {
+        var r = Model.parseYtRadioStatus(text)
+        root.ytRadioKnown = r.known
+        root.ytRadioEnabled = r.enabled
+      }
+    }
+    onExited: function (exitCode) {
+      if (exitCode !== 0) { root.ytRadioKnown = false; root.ytRadioEnabled = false }
+    }
+  }
+
+  // ---- controls ------------------------------------------------------
+  // Fire-and-forget: cliamp's subcommands abstract the v1/v2 IPC migration,
+  // and execDetached keeps the shell event loop free.
+
+  function _run(args) {
+    Quickshell.execDetached([root.cliampBin].concat(args))
+    root._bump()
+  }
+
+  function playPause() { _run(["toggle"]) }
+  function play() { _run(["play"]) }
+  function pause() { _run(["pause"]) }
+  function next() { _run(["next"]) }
+  function previous() { _run(["prev"]) }
+  function stop() { _run(["stop"]) }
+
+  // `cliamp seek` help says "seek to position in seconds" -> treated as an
+  // absolute target, clamped at 0.
+  function seekTo(sec) { _run(["seek", String(Math.max(0, Math.round(sec)))]) }
+
+  // `cliamp volume <dB>` is an absolute set (verified live: -6 -> -6, +2 -> 2),
+  // range [-30, +6].
+  function setVolume(db) {
+    var v = Math.max(-30, Math.min(6, Math.round(db)))
+    _run(["volume", String(v)])
+  }
+  function nudgeVolume(delta) { setVolume((root.volumeDb || 0) + delta) }
+
+  function toggleShuffle() { _run(["shuffle", "toggle"]) }
+  function cycleRepeat() { _run(["repeat", "cycle"]) }
+
+  function toggleYtRadio() {
+    if (!root.running) return
+    Quickshell.execDetached([root.cliampBin, "plugins", "call", root.ytRadioName, "toggle"])
+    ytRadioBump.restart()
+  }
+  Timer {
+    id: ytRadioBump
+    interval: 400
+    repeat: false
+    onTriggered: if (root.running && !ytRadioProc.running) ytRadioProc.running = true
+  }
+
+  Component.onCompleted: refresh()
+
+  // ---- IPC for Hyprland keybinds -----------------------------------
+  // e.g.  bindd = SUPER, P, cliamp play/pause, exec, omarchy-shell io.github.cache21.cliamp playPause
+  IpcHandler {
+    target: "io.github.cache21.cliamp"
+
+    function status(): string { return JSON.stringify(root.snapshot) }
+    function playPause(): string { root.playPause(); return "ok" }
+    function play(): string { root.play(); return "ok" }
+    function pause(): string { root.pause(); return "ok" }
+    function next(): string { root.next(); return "ok" }
+    function previous(): string { root.previous(); return "ok" }
+    function stop(): string { root.stop(); return "ok" }
+    function shuffle(): string { root.toggleShuffle(); return "ok" }
+    function repeat(): string { root.cycleRepeat(); return "ok" }
+    function volume(amount: string): string {
+      var d = Number(amount)
+      if (!isFinite(d)) return "usage: volume <dB delta, e.g. -3>"
+      root.nudgeVolume(d)
+      return "ok"
+    }
+    function ytRadio(): string {
+      if (!root.running) return "cliamp not running"
+      root.toggleYtRadio()
+      return "ok"
+    }
+    function refresh(): void { root.refresh() }
+  }
+}
