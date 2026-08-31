@@ -39,10 +39,11 @@ BarWidget {
 
   readonly property string barArtUrl: (svc && svc.running && showBarThumbnail) ? Model.artUrl(svc.snapshot) : ""
   readonly property string barArtFallback: (svc && svc.running && showBarThumbnail) ? Model.artUrlFallback(svc.snapshot) : ""
-  readonly property string displayText: {
-    if (!svc || !svc.running) return "cliamp"
-    return Model.nowPlayingLabel(svc.snapshot, root.showArtist) || "cliamp"
-  }
+  // Empty while cliamp isn't running (and until a track has real metadata) —
+  // the widget collapses to just the icon.
+  readonly property string displayText: (svc && svc.running)
+    ? Model.nowPlayingLabel(svc.snapshot, root.showArtist)
+    : ""
   readonly property string glyph: svc && svc.running ? Model.stateGlyph(svc.state) : "󰝛" // nf-md-music_note_off
   readonly property bool ytDot: root.showYtRadioDot && !!svc && svc.ytRadioEnabled
 
@@ -174,7 +175,9 @@ BarWidget {
       height: root.barSize
       anchors.verticalCenter: parent.verticalCenter
       clip: true
-      visible: !root.vertical
+      // Drop out of the Row entirely (no leftover spacing) when there's no
+      // text — inactive state is icon-only.
+      visible: !root.vertical && root.displayText !== ""
 
       // Spectrum sits behind the label (declared first = painted first).
       Spectrum {
