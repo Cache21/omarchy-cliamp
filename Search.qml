@@ -235,7 +235,7 @@ Item {
             PanelActionButton {
               id: queueBtn
               anchors.verticalCenter: parent.verticalCenter
-              iconText: "󰐎" // nf-md-playlist_plus
+              iconText: "＋" // add to queue
               foreground: root.bar ? root.bar.foreground : Color.foreground
               tooltipText: "Encolar"
               onClicked: if (root.svc) root.svc.queueUrl(rowItem.modelData.url)
