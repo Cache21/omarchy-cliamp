@@ -86,6 +86,21 @@ BarWidget {
   }
   function togglePanel() { if (panelLoader.item) panelLoader.item.toggle() }
 
+  // Spectrum spans the whole widget (behind the thumbnail/glyph AND the label).
+  // Declared before `contents` so it paints underneath; the opaque thumbnail
+  // just floats on top of its left edge.
+  Spectrum {
+    anchors.fill: contents
+    anchors.topMargin: Style.space(3)
+    anchors.bottomMargin: Style.space(3)
+    visible: root.barSpectrumOn
+    opacity: root.barSpectrumOpacity
+    bands: root.svc ? root.svc.visBands : []
+    // barColor left at the Spectrum default (theme accent).
+    gap: Math.max(1, Style.space(2))
+    minBar: 0
+  }
+
   Row {
     id: contents
     anchors.centerIn: parent
@@ -167,8 +182,8 @@ BarWidget {
     Item {
       id: labelClip
       readonly property bool overflow: label.implicitWidth > root.maxLabelWidth
-      // Widen to a small floor while the spectrum is behind the text so the
-      // bars aren't cramped when the title is short.
+      // Keep a small floor while the spectrum is on so the whole widget (and
+      // thus the spectrum behind it) doesn't collapse for a one-word title.
       width: Math.min(root.maxLabelWidth,
                       root.barSpectrumOn ? Math.max(label.implicitWidth, Style.space(96))
                                          : label.implicitWidth)
@@ -178,19 +193,6 @@ BarWidget {
       // Drop out of the Row entirely (no leftover spacing) when there's no
       // text — inactive state is icon-only.
       visible: !root.vertical && root.displayText !== ""
-
-      // Spectrum sits behind the label (declared first = painted first).
-      Spectrum {
-        anchors.fill: parent
-        anchors.topMargin: Style.space(3)
-        anchors.bottomMargin: Style.space(3)
-        visible: root.barSpectrumOn
-        opacity: root.barSpectrumOpacity
-        bands: root.svc ? root.svc.visBands : []
-        // barColor left at the Spectrum default (theme accent).
-        gap: Math.max(1, Style.space(2))
-        minBar: 0
-      }
 
       Text {
         id: label
