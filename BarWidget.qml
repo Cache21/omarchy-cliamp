@@ -36,7 +36,6 @@ BarWidget {
     if (visWant && !visHeld) { svc.acquireVis(); visHeld = true }
     else if (!visWant && visHeld) { svc.releaseVis(); visHeld = false }
   }
-  Component.onDestruction: if (visHeld && svc) svc.releaseVis()
 
   readonly property string barArtUrl: (svc && svc.running && showBarThumbnail) ? Model.artUrl(svc.snapshot, "bar") : ""
   readonly property string displayText: {
@@ -236,5 +235,8 @@ BarWidget {
     }
   }
 
-  Component.onDestruction: if (root.bar) root.bar.hideTooltip(root)
+  Component.onDestruction: {
+    if (root.bar) root.bar.hideTooltip(root)
+    if (root.visHeld && root.svc) root.svc.releaseVis()
+  }
 }
