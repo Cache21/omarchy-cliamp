@@ -116,8 +116,14 @@ Item {
     }
     root.running = true
     root.state = s.state
-    root.title = s.title
-    root.artist = s.artist
+    // `cliamp queue <url>` names the track from the URL basename ("watch") and
+    // never re-resolves it; when we queued it from search we already know the
+    // real title/artist, so patch them back in by video id.
+    var ov = null
+    var ovId = Model.youtubeIdFromPath(s.path)
+    if (ovId && root._titleOverrides[ovId]) ov = root._titleOverrides[ovId]
+    root.title = (ov && ov.title) ? ov.title : s.title
+    root.artist = (ov && ov.artist) ? ov.artist : s.artist
     root.album = s.album
     root.station = s.station
     root.path = s.path
@@ -231,10 +237,38 @@ Item {
   // `cliamp queue <url>` appends one entry (no expand, no autoplay), applied to
   // the live TUI/daemon over the socket.
 
+  // video id -> { title, artist } for tracks we queued from search, so the
+  // "watch" placeholder cliamp assigns gets replaced in _applyStatus. Capped;
+  // yt-radio's own tracks come with real metadata and never hit this.
+  property var _titleOverrides: ({})
+  property var _titleOverrideOrder: []
+  function _rememberTitle(id, title, artist) {
+    if (!id || (!title && !artist)) return
+    var m = root._titleOverrides
+    if (!m[id]) {
+      root._titleOverrideOrder.push(id)
+      if (root._titleOverrideOrder.length > 40) delete m[root._titleOverrideOrder.shift()]
+    }
+    m[id] = { title: title || "", artist: artist || "" }
+    root._titleOverrides = m   // reassign to re-trigger bindings
+  }
+
   function queueUrl(url) {
     if (!url) return
     Quickshell.execDetached([root.cliampBin, "queue", String(url)])
     root._bump()
+  }
+
+  // r = { id, title, channel, url } from Search.qml
+  function queueResult(r) {
+    if (!r) return
+    root._rememberTitle(Model.youtubeIdFromPath(r.url), r.title, r.channel)
+    root.queueUrl(r.url)
+  }
+  function playResult(r) {
+    if (!r) return
+    root._rememberTitle(Model.youtubeIdFromPath(r.url), r.title, r.channel)
+    root.playUrl(r.url)
   }
 
   property string _jumpTarget: ""   // video id we're trying to reach

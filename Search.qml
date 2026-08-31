@@ -67,7 +67,7 @@ Item {
 
   function playAt(i) {
     if (!svc || i < 0 || i >= results.length) return
-    svc.playUrl(results[i].url)
+    svc.playResult(results[i])
     root.exitRequested()
   }
 
@@ -238,7 +238,7 @@ Item {
               iconText: "＋" // add to queue
               foreground: root.bar ? root.bar.foreground : Color.foreground
               tooltipText: "Encolar"
-              onClicked: if (root.svc) root.svc.queueUrl(rowItem.modelData.url)
+              onClicked: if (root.svc) root.svc.queueResult(rowItem.modelData)
             }
           }
         }
