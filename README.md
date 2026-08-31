@@ -10,14 +10,18 @@ loaded, and IPC methods for Hyprland keybinds.
 
 ## Features
 
-- **Bar item** — transport glyph + scrolling `Artist — Title`. It reads
-  `cliamp status --json` on an interval; no `playerctl`, no extra daemons.
+- **Bar item** — cover thumbnail (or transport glyph) + scrolling `Artist — Title`.
+  It reads `cliamp status --json` on an interval; no `playerctl`, no extra daemons.
   - left click — play / pause (`cliamp toggle`)
   - middle click — next track
   - right click — open / close the panel
   - scroll — volume ±1 dB
-- **Panel** — seekable progress bar (or "En vivo" for streams), prev / play-pause
-  / next / stop, shuffle and repeat, a volume slider, and the yt-radio toggle.
+- **Panel** — 84px cover art, seekable progress bar (or "En vivo" for streams),
+  prev / play-pause / next / stop, shuffle and repeat, a volume slider, and the
+  yt-radio toggle.
+- **Cover art** — for YouTube / YouTube Music tracks the video id in `track.path`
+  becomes an `i.ytimg.com` thumbnail; local files use cliamp's embedded
+  `album_art_url`; radio streams fall back to a glyph.
 - **yt-radio** — a switch bound to `cliamp plugins call yt-radio status|toggle`.
   Disabled while cliamp is not running, because cliamp only loads Lua plugins in
   the TUI (not in `cliamp --daemon`).
@@ -52,6 +56,7 @@ Set from the Omarchy menu → Setup → Bar, or in `~/.config/omarchy/shell.json
 | `showArtist` | boolean | `true` | Show `Artist — Title` instead of just the title. |
 | `hideWhenStopped` | boolean | `false` | Remove the widget from the bar while cliamp is not running. |
 | `showYtRadioDot` | boolean | `true` | Accent dot next to the icon while yt-radio is active. |
+| `showBarThumbnail` | boolean | `true` | Show the cover thumbnail in the bar instead of the glyph (falls back to the glyph when there's no art). |
 
 Two extra keys are read from `shell.json` but not shown in the settings form
 (rarely needed): `cliampPath` (default `cliamp`) and `ytRadioPlugin` (default
